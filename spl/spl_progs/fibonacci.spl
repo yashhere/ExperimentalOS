@@ -1,0 +1,17 @@
+alias counter S0;
+alias n S1;
+alias a S2;
+alias b S3;
+alias c S4;
+print "Enter n:";
+read n;
+counter = 0;
+a= 0;
+b = 1;
+while(counter <= n) do
+    c = a + b;
+    a = b;
+    b = c;
+    print c;
+    counter = counter + 1;
+endwhile;
