@@ -19,3 +19,36 @@ physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
 [ currentPCB + 12 ] = R5;
 [ currentPCB + 13 ] = R6;
 [ currentPCB + 14 ] = R7;
+
+alias newProcess S3;
+newProcess = (currentPID + 1) % 32;
+
+while(1) do
+    if ([READY_LIST + newProcess * 32 + 1] == 1) then
+        break;
+    else
+        newProcess = (newProcess + 1) % 32;
+    endif;
+endwhile;
+
+alias newPCB S4;
+newPCB = READY_LIST + 32 * newProcess;
+BP = [newPCB + 2];
+SP = [newPCB + 3];
+PTBR = [ newPCB + 5];
+PTLR = [newPCB + 6];
+R0 = [newPCB + 7];
+R1 = [newPCB + 8];
+R2 = [newPCB + 9];
+R3 = [newPCB + 10];
+R4 = [newPCB + 11];
+R5 = [newPCB + 12];
+R6 = [newPCB + 13];
+R7 = [newPCB + 14];
+
+SP = SP + 1;
+alias newPhysicalSP S2;
+newPhysicalSP = ([PTBR + 2 * (SP / 512) + 0] * 512) + (SP % 512);
+[newPhysicalSP] = [newPCB + 4];
+[newPCB + 1] = 2;
+ireturn;
