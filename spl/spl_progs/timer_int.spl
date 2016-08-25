@@ -23,12 +23,8 @@ physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
 alias newProcess S3;
 newProcess = (currentPID + 1) % 32;
 
-while(1) do
-    if ([READY_LIST + newProcess * 32 + 1] == 1) then
-        break;
-    else
-        newProcess = (newProcess + 1) % 32;
-    endif;
+while([READY_LIST + newProcess * 32 + 1] != 1) do
+    newProcess = (newProcess + 1) % 32;
 endwhile;
 
 alias newPCB S4;
