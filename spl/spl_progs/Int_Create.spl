@@ -7,56 +7,56 @@ sysCallNo = [physicalSP - 1];
 alias fileName S2;
 fileName = [physicalSP - 3];
 
+alias i S3
 if(sysCallNo == 1) then
-    S3 = FAT;   // S3 = 2560
+    i = FAT;   // S3 = 2560
 
     // checking if file already exists in the disk
-    while(S3 < 3072) do
-        if(fileName == [S3]) then
-            [physicalSP - 2] = 0;       // putting 0(success) in top of stack
+    while(i < FAT + 512) do
+        if(fileName == [i + 0]) then
+            [physicalSP - 2] = 0;       // putting 0(success) in return value
             ireturn;
         endif;
-        S3 = S3 + 8;    // a fat entry is of 8 words
+        i = i + 8;    // a fat entry is of 8 words
     endwhile;
 
-    S3 = DISK_LIST + 24;    //DISK_LIST = 3072
+    i = DISK_LIST + 24;    //DISK_LIST = 3072
 
     // FIRST 24 blocks for system and init
 
     //checking for a free entry(indicated by 0) in the disk
-    while([S3] != 0 && S3 < DISK_LIST + 448) do
-        S3 = S3 + 1;
+    while([i] != 0 && i < DISK_LIST + 448) do
+        i = i + 1;
     endwhile;
 
     // if disk is not empty return -1 to user program
-    if([S3] != 0) then
+    if([i] != 0) then
         [physicalSP - 2] = -1;
         ireturn;
     endif;
 
-    S4 = FAT;
-    while(S4 < 3072) do
-        if([S4 + 2] != -1 ) then
-            S4 = S4 + 8;
+    j = FAT;
+    while(j < 3072) do
+        if([j + 2] != -1 ) then
+            j = j + 8;
         else
             break;
         endif;
     endwhile;
 
-    if([S4 + 2] != -1) then
+    if([j + 2] != -1) then
         [physicalSP - 2] = -1;
         ireturn;
     endif;
 
     alias basicBlock S3;
     basicBlock = basicBlock - 3072;
-    [S4] = fileName;
-    [S4 + 1] = 0;
-    [S4 + 2] = basicBlock;
+    [j] = fileName;
+    [j + 1] = 0;
+    [j + 2] = basicBlock;
 
     load(1, basicBlock);
 
-    alias i S5;
     i = 0;
     while(i < 256) do
         [i + 512] = -1;
@@ -70,6 +70,5 @@ if(sysCallNo == 1) then
 
     store(5, 19);
     store(6, 20);
-    [physicalSP - 2] = -1;
 endif;
 ireturn;
