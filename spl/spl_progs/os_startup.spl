@@ -25,4 +25,15 @@ load(9,3);
 load(10,4);
 load(5, 19);
 load(6,20);
+
+alias counter S0;
+counter = 0;
+
+// FILE_TABLE = 1344
+
+while(counter < 128) do
+    [ FILE_TABLE + counter + 0] = -1;   // Set FAT Index to -1
+    [ FILE_TABLE + counter + 1] =  0;   // Set File Open Count to 0
+    counter = counter + 2;          // Move to next entry
+endwhile;
 ireturn;

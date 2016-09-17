@@ -1,0 +1,79 @@
+alias physicalSP S0;
+physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+
+alias sysCallNo S1;
+sysCallNo = [physicalSP - 1];
+
+alias filename S2;
+filename = [physicalSP - 3];
+
+if(sysCallNo == 2) then
+    S3 = FAT;
+    while(S3 < FAT + 512) do
+        if([S3] == filename) then
+            break;
+        endif;
+        S3 = S3 + 8;
+    endwhile;
+
+    if([S3] != filename) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    // FILE_TABLE = 1344
+
+    S4 = -10;
+
+    alias counter S2;
+    counter = 0;
+    while(counter < 128) do
+        if([ FILE_TABLE + counter + 0] == S3) then
+            S4 = FILE_TABLE + counter + 0;
+            break;
+        else
+            if([FILE_TABLE + counter + 0] == -1) then
+                S4 = FILE_TABLE + counter + 0;
+                break;
+            endif;
+            counter = counter + 2;
+        endif;
+    endwhile;
+
+    if(S4 == -10) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    alias currentPID S5;
+    currentPID = (PTBR - 1024) / 8;
+
+    alias currentPCB S6;
+    currentPCB = READY_LIST + 32 * currentPID;
+
+    S5 = -1;
+    alias i S2;
+    i = 0;
+    while(i < 16) do
+        if([currentPCB + 15 + i] == -1) then
+            S5 = currentPCB + 15 + i;
+            break;
+        endif;
+        i = i + 2;
+    endwhile;
+
+    if(S5 == -1) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    [S5 + 0] = S4;
+    [S5 + 1] = 0;
+
+    [S4] = S3;
+    [S4 + 1] = [S4 + 1] + 1;
+
+    [physicalSP - 2] = S5;
+endif;
+
+ireturn;
