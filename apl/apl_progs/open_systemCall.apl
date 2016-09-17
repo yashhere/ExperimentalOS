@@ -1,6 +1,9 @@
+decl
+    integer a;
+enddecl
+
 integer main()
 {
-    integer a;
-    a = Open("File");
+    a = Open("File);
     return 0;
 }
