@@ -1,81 +1,142 @@
+// getting the physicalSP
+// Location of page table entry = PTBR + 2 x (Logical Address / 512)
+// Physical Page Number = [ Location of page table entry + 0 ]
+// offset = logical_address % 512
+// Physical Address = Physical Page Number x 512 + offset
+
 alias physicalSP S0;
 physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+
+//        _________________________
+//        |   IP + 2 (SP)         |
+//        |   SYSTEM CALL NO      |
+//        |   RETURN VALUE        |
+//        |   ARGUMENTS n to 1    |
+//        -------------------------
 
 alias sysCallNo S1;
 sysCallNo = [physicalSP - 1];
 
-alias filename S2;
-filename = [physicalSP - 3];
-
-print filename;
+//Open system Call
 if(sysCallNo == 2) then
-    S3 = FAT;
-    while(S3 < FAT + 512) do
-        if([S3] != filename) then
-            S3 = S3 + 8;
-        endif;
+
+    alias filename S2;
+    filename = [physicalSP - 3];
+
+//    ____________________________________________________________________________
+//    |       0       |        1     |            2            |    3 - 7        |
+//    ____________________________________________________________________________
+//    |    File Name  |    File Size |  Block# of Basic Block  | ...Unused...    |
+//    ----------------------------------------------------------------------------
+
+    S3 = 0;
+
+    //max 64 entries in the FAT
+    //per entry size of 8 Blocks
+
+    while(S3 < 64 && [FAT + S3 * 8] != filename) do
+        S3 = S3 + 1;
     endwhile;
 
-    if(S3 >= FAT + 512) then
-        print "file not found";
-        [physicalSP - 2] = -1;
+    if(S3 >= 64) then
+        print "File not Found";
+        [physicalSP - 2] = -1;      //return value = -1, failure
         ireturn;
     endif;
-
-    S3 = S3 - FAT;
 
     // FILE_TABLE = 1344
+    // System wide open file table - max entries 64 each two words
+    // one is "FAT index" and second is "file open count"
 
-    S4 = -10;
+    // S4 = index of the System-wide open file table entry
+    S4 = 0;
 
-    alias counter S2;
-    counter = 0;
-    while(counter < 128) do
-        if([ FILE_TABLE + counter + 0] == S3) then
-            S4 = FILE_TABLE + counter + 0;
-            break;
-        else
-            if([FILE_TABLE + counter + 0] == -1) then
-                S4 = FILE_TABLE + counter + 0;
-                break;
-            endif;
-        endif;
-        counter = counter + 2;
+    //searching for fat entry
+    while([FILE_TABLE + S4 * 2] != S3 && S4 < 64) do
+        S4 = S4 + 1;
     endwhile;
 
-    S4 = S4 - FILE_TABLE;
-    if(S4 == -10) then
-        print "no space in system wide open file table";
-        [physicalSP - 2] = -1;
-        ireturn;
+    //seraching for valid entry
+    if(S4 >= 64) then
+        S4 = 0;
+        while([FILE_TABLE + S4 * 2] != -1 && S4 < 64) do
+            S4 = S4 + 1;
+        endwhile;
+
+        if(S4 >= 64) then
+            print "no space in system wide open file table";
+            [physicalSP - 2] = -1;
+            ireturn;
+        endif;
     endif;
 
-    alias currentPCB S6;
+    alias currentPCB S5;
     currentPCB = READY_LIST + 32 * ((PTBR - 1024) / 8);
 
-    S5 = -1;
-    alias i S2;
-    i = 0;
-    while(i < 16) do
-        if([currentPCB + 15 + i] != -1) then
-            i = i + 2;
+    // searching per process file table
+    alias i S6;
+    i = 15;
+    while(i < 31) do
+        if([currentPCB + i] == -1) then
+            break;
         endif;
+        i = i + 2;
     endwhile;
 
-    S5 = currentPCB + 15 + i;
-
-    if(i >= 16) then
+    if(i >= 31) then
         print "max open file limit reached";
         [physicalSP - 2] = -1;
         ireturn;
     endif;
 
-    [S5 + 0] = S4;
-    [S5 + 1] = 0;
+    //Pointer to System-Wide File Table Entry
+    [currentPCB + i + 0] = S4;
 
-    [S4] = S3;
-    [S4 + 1] = [S4 + 1] + 1;
+    //LSEEK POSITION
+    [currentPCB + i + 1] = 0;
 
-    [physicalSP - 2] = S5 - currentPCB;
+    //FAT Index field of the System Wide file table entry
+    [FILE_TABLE + S4 * 2 + 0] = S3;
+
+    //File Open Count
+    [FILE_TABLE + S4 * 2 + 1] = [FILE_TABLE + S4 * 2 + 1] + 1;
+
+    //The index of the entry in the per-process open file table
+    [physicalSP - 2] = (i - 15) / 2;
+    ireturn;
+endif;
+
+if(sysCallNo == 3) then
+    alias fileDescriptor S2;
+    fileDescriptor = [physicalSP - 3];
+
+    //there can be atmost 8 entries in a per process file table and each entry is of two words
+    if(fileDescriptor < 0 || fileDescriptor > 7) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    alias PCB S3;
+    PCB = READY_LIST + 32 * ((PTBR - 1024) / 8);
+
+    //checking for valid file descriptor
+    if([PCB + fileDescriptor * 2 + 0] == -1) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    //decrement the file open count in system wide open file table
+    alias index S4;
+    index = [PCB + fileDescriptor * 2];
+    [FILE_TABLE + index * 2 + 1] = [FILE_TABLE + index * 2 + 1] - 1;
+
+    //if open file count = 0, then invalidate the entries
+    if([FILE_TABLE + index * 2 + 1] == 0) then
+        [FILE_TABLE + index * 2 + 0] = -1;
+    endif;
+
+    //now invalidate the entry in per process open file table
+    [PCB + fileDescriptor * 2 + 0] = -1;
+    [PCB + fileDescriptor * 2 + 1] = -1;
     ireturn;
 endif;

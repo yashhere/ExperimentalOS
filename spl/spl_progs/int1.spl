@@ -33,6 +33,7 @@ if(sysCallNo == 1) then
         [physicalSP - 2] = -1;
         ireturn;
     endif;
+    print "check1";
 
     S4 = FAT;
     while(S4 < 3072) do
@@ -47,6 +48,7 @@ if(sysCallNo == 1) then
         [physicalSP - 2] = -1;
         ireturn;
     endif;
+    print "check2";
 
     alias basicBlock S3;
     basicBlock = basicBlock - 3072;
@@ -65,11 +67,72 @@ if(sysCallNo == 1) then
 
     store(1, basicBlock);
 
-    //
     [basicBlock + 3072] = 1;
 
     store(5, 19);
     store(6, 20);
-    [physicalSP - 2] = -1;
+    [physicalSP - 2] = 0;
+    ireturn;
+    print "check3";
 endif;
-ireturn;
+
+if(sysCallNo == 4) then
+    S3 = 0;
+
+    while([FAT + S3 * 8] != fileName && S3 < 64) do
+        S3 = S3 + 1;
+    endwhile;
+
+    if(S3 >= 64) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    S4 = 0;
+    while([FILE_TABLE + S4 * 2 + 0] != S3 && S4 < 64) do
+        S4 = S4 + 1;
+    endwhile;
+
+    if(S4 < 64) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    alias basicBlock S5;
+    basicBlock = [FAT + S3 * 8 + 2];
+
+    load(1, basicBlock);
+
+    alias i S6;
+    i = 0;
+    while(i < 256) do
+        if([512 + i] != -1) then
+            load(1, [i + 512]);
+
+            alias j S7;
+            j = 0;
+            while(j < 512) do
+                [j + 512] = "";
+                j = j + 1;
+            endwhile;
+            store(1, [i + 512]);
+
+            [DISK_LIST + [i + 512]] = 0;
+        endif;
+        load(1, basicBlock);
+        [512 + i] = "";
+        i = i + 1;
+    endwhile;
+
+    [3072 + basicBlock] = 0;
+    store(1, basicBlock);
+
+    [FAT + S3 * 8 + 0] = -1;
+    [FAT + S3 * 8 + 2] = -1;
+
+    store(5, 19);
+    store(6, 20);
+
+    [physicalSP - 2] = 0;
+    ireturn;
+endif;
