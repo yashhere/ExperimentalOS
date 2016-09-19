@@ -33,7 +33,6 @@ if(sysCallNo == 1) then
         [physicalSP - 2] = -1;
         ireturn;
     endif;
-    print "check1";
 
     S4 = FAT;
     while(S4 < 3072) do
@@ -48,7 +47,6 @@ if(sysCallNo == 1) then
         [physicalSP - 2] = -1;
         ireturn;
     endif;
-    print "check2";
 
     alias basicBlock S3;
     basicBlock = basicBlock - 3072;
@@ -73,7 +71,6 @@ if(sysCallNo == 1) then
     store(6, 20);
     [physicalSP - 2] = 0;
     ireturn;
-    print "check3";
 endif;
 
 if(sysCallNo == 4) then

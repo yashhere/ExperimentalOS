@@ -138,5 +138,7 @@ if(sysCallNo == 3) then
     //now invalidate the entry in per process open file table
     [PCB + fileDescriptor * 2 + 0] = -1;
     [PCB + fileDescriptor * 2 + 1] = -1;
+
+    [physicalSP - 2] = 0;
     ireturn;
 endif;
