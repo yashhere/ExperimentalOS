@@ -1,0 +1,25 @@
+alias physicalSP S0;
+physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+
+alias sysCallNo S1;
+sysCallNo = [physicalSP - 1];
+
+alias fileDescriptor S3;
+fileDescriptor = [physicalSP - 4];
+
+if(sysCallNo == 6) then
+    if(fileDescriptor < 0 || fileDescriptor > 7) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    alias PCB S4;
+    PCB = READY_LIST + 32 * ((PTBR - 1024) / 8);
+
+    if([PCB + 15 + fileDescriptor * 2 + 0] == -1) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    S5 = [PCB + 15 + fileDescriptor * 2 + 0];        // pointer to system table
+    S6 = [PCB + 15 + fileDescriptor * 2 + 1];        // LSEEK

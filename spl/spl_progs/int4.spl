@@ -1,0 +1,76 @@
+alias physicalSP S0;
+physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+
+alias sysCallNo S1;
+sysCallNo = [physicalSP - 1];
+
+alias fileDescriptor S3;
+fileDescriptor = [physicalSP - 4];
+
+if(sysCallNo == 5) then
+    if(fileDescriptor < 0 || fileDescriptor > 7) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    alias PCB S4;
+    PCB = READY_LIST + 32 * ((PTBR - 1024) / 8);
+
+    if([PCB + 15 + fileDescriptor * 2 + 0] == -1) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    S5 = [PCB + 15 + fileDescriptor * 2 + 0];        // pointer to system table
+    S6 = [PCB + 15 + fileDescriptor * 2 + 1];        // LSEEK
+
+    //alias fatEntry S7;
+    //fatEntry = [FILE_TABLE + S5 * 2 + 0];
+
+    alias basicBlock S7;
+    basicBlock = [FAT + [FILE_TABLE + S5 * 2 + 0] * 8 + 2];
+
+    load(1, basicBlock);
+
+    S9 = S6 / 512;
+
+    alias i S10;
+    i = 24;
+    if([512 + S9] == -1) then
+        while([DISK_LIST + i] != 0 && i < 448) do
+            i = i + 1;
+        endwhile;
+
+        if(i >= 448) then
+            [physicalSP - 2] = -1;
+            ireturn;
+        endif;
+
+        [DISK_LIST + i] = 1;
+
+        [512 + S9] = i;
+
+        store(1, basicBlock);
+
+        [FAT + [FILE_TABLE + S5 * 2 + 0] * 8 + 1] = [FAT + [FILE_TABLE + S5 * 2 + 0] * 8 + 1] + 512;
+
+        store(5, 19);
+        store(6, 20);
+
+    else
+        i = [512 + S9];
+    endif;
+
+    load(1, i);
+
+    [512 + S6 % 512] = [physicalSP - 3];
+
+    store(1, i);
+
+    [PCB + 15 + fileDescriptor * 2 + 1] = S6 + 1;
+    [physicalSP - 2] = 0;
+
+    ireturn;
+endif;
+
+
