@@ -8,6 +8,9 @@ alias fileDescriptor S3;
 fileDescriptor = [physicalSP - 4];
 
 if(sysCallNo == 6) then
+    alias newSeek S2;
+    newSeek = [physicalSP - 3];
+
     if(fileDescriptor < 0 || fileDescriptor > 7) then
         [physicalSP - 2] = -1;
         ireturn;
@@ -23,3 +26,59 @@ if(sysCallNo == 6) then
 
     S5 = [PCB + 15 + fileDescriptor * 2 + 0];        // pointer to system table
     S6 = [PCB + 15 + fileDescriptor * 2 + 1];        // LSEEK
+
+    alias fileSize S7;
+    fileSize = [FAT + [FILE_TABLE + S5 * 2 + 0] * 8 + 1];
+
+    if(newSeek < 0 || newSeek > fileSize) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    [PCB + 15 + fileDescriptor * 2 + 1] = newSeek;
+
+    [physicalSP - 2] = 0;
+    ireturn;
+endif;
+
+if(sysCallNo == 7) then
+    print "here1";
+    if(fileDescriptor < 0 || fileDescriptor > 7) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    print "here2";
+    alias PCB S4;
+    PCB = READY_LIST + 32 * ((PTBR - 1024) / 8);
+
+    S5 = [PCB + 15 + fileDescriptor * 2 + 0];        // pointer to system table
+    S6 = [PCB + 15 + fileDescriptor * 2 + 1];        // LSEEK
+
+    alias basicBlock S7;
+    alias fileSize S8;
+
+    basicBlock = [FAT + [FILE_TABLE + S5 * 2 + 0] * 8 + 2];
+    fileSize = [FAT + [FILE_TABLE + S5 * 2 + 0] * 8 + 1];
+    load(1, basicBlock);
+
+    if(S6 == fileSize) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    print "here3";
+    S9 = [512 + S6 / 512];
+
+    load(1, S9);
+
+    [physicalSP - 3] = [512 + S6 % 512];
+    [PCB + 15 + fileDescriptor * 2 + 1] = [PCB + 15 + fileDescriptor * 2 + 1] + 1;
+
+    print "here4";
+    [physicalSP - 2] = 0;
+
+    print "here5";
+    ireturn;
+endif;
+
