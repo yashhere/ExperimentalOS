@@ -1,0 +1,46 @@
+alias physicalSP S0;
+physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+
+alias sysCallNo S1;
+sysCallNo = [physicalSP - 1];
+
+if(sysCallNo == 8) then
+    alias counter S2;
+    counter = 0;
+    while(counter < 32 && [READY_LIST + 32 * counter + 1] != 0) do
+        counter = counter + 1;
+    endwhile;
+
+    if(counter >= 32) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    [READY_LIST + counter * 32 + 0] = counter;
+
+    alias S3 valid_pages;
+    valid_pages = 0;
+    counter = 1;
+    while(counter < 8) do
+        if([PTBR + counter] == "01" || [PTBR + counter] == "11") then
+            valid_pages = valid_pages + 1;
+        endif;
+        counter = counter + 1;
+    endwhile;
+
+    alias S4 mem_pages;
+    counter = 0;
+
+    while(counter < 64) do
+        if([MEM_LIST + counter] == 0) then
+            mem_pages = mem_pages + 1;
+        endif;
+        counter = counter + 1;
+    endwhile;
+
+    if(mem_pages < valid_pages) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+

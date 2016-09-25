@@ -27,6 +27,12 @@ load(15,9);
 load(16,10);
 load(17,11);
 load(18,12);
+load(19,13);
+load(20,14);
+load(21,15);
+load(22,16);
+load(23,17);
+load(24,18);
 load(9,3);
 load(10,4);
 load(5, 19);
@@ -34,22 +40,36 @@ load(6,20);
 
 breakpoint;
 alias counter S0;
-counter = 0;
 
 // FILE_TABLE = 1344
-
+counter = 0;
 while(counter < 128) do
     [ FILE_TABLE + counter + 0] = -1;   // Set FAT Index to -1
     [ FILE_TABLE + counter + 1] =  0;   // Set File Open Count to 0
     counter = counter + 2;          // Move to next entry
 endwhile;
 
-counter = 15;
+//MEM_LIST = 1280
+counter = 0;
+while(counter < 64) do
+    if(counter < 29) then
+        [MEM_LIST + counter] = 1;
+    else
+        [MEM_LIST + counter] = 0;
+    endif;
+    counter = counter + 1;
+endwhile;
 
+counter = 15;
 while(counter <= 30) do
     [READY_LIST + counter] = -1;
     [READY_LIST + counter + 1] = 0;
     counter = counter + 2;
 endwhile;
 
+counter = 1;
+while(counter < 32 && READY_LIST + counter * 32 < 2560) do
+    [READY_LIST + counter * 32 + 1] = 0;
+    counter = counter + 1;
+endwhile;
 ireturn;
