@@ -56,7 +56,7 @@ if(sysCallNo == 2) then
         S4 = S4 + 1;
     endwhile;
 
-    //seraching for valid entry
+    //searching for valid entry
     if(S4 >= 64) then
         S4 = 0;
         while([FILE_TABLE + S4 * 2] != -1 && S4 < 64) do
@@ -110,7 +110,7 @@ if(sysCallNo == 3) then
     alias fileDescriptor S2;
     fileDescriptor = [physicalSP - 3];
 
-    //there can be atmost 8 entries in a per process file table and each entry is of two words
+    //there can be at most 8 entries in a per process file table and each entry is of two words
     if(fileDescriptor < 0 || fileDescriptor > 7) then
         [physicalSP - 2] = -1;
         ireturn;
@@ -120,14 +120,14 @@ if(sysCallNo == 3) then
     PCB = READY_LIST + 32 * ((PTBR - 1024) / 8);
 
     //checking for valid file descriptor
-    if([PCB + fileDescriptor * 2 + 0] == -1) then
+    if([PCB + 15 + fileDescriptor * 2 + 0] == -1) then
         [physicalSP - 2] = -1;
         ireturn;
     endif;
 
     //decrement the file open count in system wide open file table
     alias index S4;
-    index = [PCB + fileDescriptor * 2];
+    index = [PCB + 15 + fileDescriptor * 2];
     [FILE_TABLE + index * 2 + 1] = [FILE_TABLE + index * 2 + 1] - 1;
 
     //if open file count = 0, then invalidate the entries
@@ -136,8 +136,8 @@ if(sysCallNo == 3) then
     endif;
 
     //now invalidate the entry in per process open file table
-    [PCB + fileDescriptor * 2 + 0] = -1;
-    [PCB + fileDescriptor * 2 + 1] = -1;
+    [PCB + 15 + fileDescriptor * 2 + 0] = -1;
+    [PCB + 15 + fileDescriptor * 2 + 1] = -1;
 
     [physicalSP - 2] = 0;
     ireturn;

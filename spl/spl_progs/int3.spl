@@ -30,7 +30,7 @@ if(sysCallNo == 6) then
     alias fileSize S7;
     fileSize = [FAT + [FILE_TABLE + S5 * 2 + 0] * 8 + 1];
 
-    if(newSeek < 0 || newSeek > fileSize) then
+    if(newSeek < 0 || newSeek >= fileSize) then
         [physicalSP - 2] = -1;
         ireturn;
     endif;
