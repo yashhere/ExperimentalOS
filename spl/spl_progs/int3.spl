@@ -42,13 +42,11 @@ if(sysCallNo == 6) then
 endif;
 
 if(sysCallNo == 7) then
-    print "here1";
     if(fileDescriptor < 0 || fileDescriptor > 7) then
         [physicalSP - 2] = -1;
         ireturn;
     endif;
 
-    print "here2";
     alias PCB S4;
     PCB = READY_LIST + 32 * ((PTBR - 1024) / 8);
 
@@ -67,7 +65,6 @@ if(sysCallNo == 7) then
         ireturn;
     endif;
 
-    print "here3";
     S9 = [512 + S6 / 512];
 
     load(1, S9);
@@ -75,10 +72,8 @@ if(sysCallNo == 7) then
     [physicalSP - 3] = [512 + S6 % 512];
     [PCB + 15 + fileDescriptor * 2 + 1] = [PCB + 15 + fileDescriptor * 2 + 1] + 1;
 
-    print "here4";
     [physicalSP - 2] = 0;
 
-    print "here5";
     ireturn;
 endif;
 
