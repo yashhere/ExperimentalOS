@@ -4,10 +4,10 @@ physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
 alias sysCallNo S1;
 sysCallNo = [physicalSP - 1];
 
-alias fileName S2;
-fileName = [physicalSP - 3];
-
 if(sysCallNo == 1) then
+    alias fileName S2;
+    fileName = [physicalSP - 3];
+
     S3 = FAT;   // S3 = 2560
 
     // checking if file already exists in the disk
@@ -74,6 +74,9 @@ if(sysCallNo == 1) then
 endif;
 
 if(sysCallNo == 4) then
+    alias fileName S2;
+    fileName = [physicalSP - 3];
+
     S3 = 0;
 
     while([FAT + S3 * 8] != fileName && S3 < 64) do
@@ -81,19 +84,24 @@ if(sysCallNo == 4) then
     endwhile;
 
     if(S3 >= 64) then
+        print "here1";
         [physicalSP - 2] = -1;
         ireturn;
     endif;
 
     S4 = 0;
-    while([FILE_TABLE + S4 * 2 + 0] != S3 && S4 < 64) do
-        S4 = S4 + 1;
+    while(S4 < 128) do
+        if([FILE_TABLE + S4] == S3) then
+            print "S3";
+            print S3;
+            print "open no";
+            print [FILE_TABLE + S4 + 1];
+            print "here2";
+            [physicalSP - 2] = -1;
+            ireturn;
+        endif;
+        S4 = S4 + 2;
     endwhile;
-
-    if(S4 < 64) then
-        [physicalSP - 2] = -1;
-        ireturn;
-    endif;
 
     alias basicBlock S5;
     basicBlock = [FAT + S3 * 8 + 2];

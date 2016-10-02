@@ -135,9 +135,12 @@ if(sysCallNo == 3) then
         [FILE_TABLE + index * 2 + 0] = -1;
     endif;
 
+    print "In close:";
+    print [FILE_TABLE + index * 2 + 1];
+
     //now invalidate the entry in per process open file table
     [PCB + 15 + fileDescriptor * 2 + 0] = -1;
-    [PCB + 15 + fileDescriptor * 2 + 1] = -1;
+    [PCB + 15 + fileDescriptor * 2 + 1] = 0;
 
     [physicalSP - 2] = 0;
     ireturn;

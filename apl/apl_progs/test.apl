@@ -5,27 +5,10 @@ enddecl
 
 integer main()
 {
-    a = Create("1.dat");
     des1 = Open("1.dat");
-
-    a = Create("2.dat");
     des2 = Open("2.dat");
-
-    a = Create("3.dat");
     des3 = Open("3.dat");
-
-    a = Create("4.dat");
     des4 = Open("4.dat");
-
-    i = 0;
-    while i < 100 do
-        a = Write(des1, i);
-        a = Write(des2, i + 1);
-        a = Write(des3, i + 2);
-        a = Write(des4, i + 3);
-
-        i = i + 4;
-    endwhile;
 
     a = Create("temp1.dat");
     des5 = Open("temp1.dat");
@@ -54,6 +37,11 @@ integer main()
         i = i + 1;
     endwhile;
 
+    a = Close(des1);
+    a = Close(des2);
+    a = Close(des3);
+    a = Close(des4);
+
     a = Seek(des5, 0);
     a = Seek(des6, 0);
 
@@ -71,10 +59,17 @@ integer main()
     endwhile;
 
     a = Close(des5);
+    print("closing temp1");
+    print(a);
     a = Close(des6);
+    print("closing temp2");
+    print(a);
+
+    a = Close(des7);
+    print("closing temp");
+    print(a);
 
     a = Delete("temp1.dat");
     a = Delete("temp2.dat");
-
     return 0;
 }
