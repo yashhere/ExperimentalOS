@@ -5,6 +5,7 @@ alias sysCallNo S1;
 sysCallNo = [physicalSP - 1];
 
 if(sysCallNo == 1) then
+
     alias fileName S2;
     fileName = [physicalSP - 3];
 
@@ -92,11 +93,6 @@ if(sysCallNo == 4) then
     S4 = 0;
     while(S4 < 128) do
         if([FILE_TABLE + S4] == S3) then
-            print "S3";
-            print S3;
-            print "open no";
-            print [FILE_TABLE + S4 + 1];
-            print "here2";
             [physicalSP - 2] = -1;
             ireturn;
         endif;
@@ -108,10 +104,12 @@ if(sysCallNo == 4) then
 
     load(1, basicBlock);
 
+    alias dataBlock S8;
     alias i S6;
     i = 0;
     while(i < 256) do
         if([512 + i] != -1) then
+            dataBlock = [512 + i];
             load(1, [i + 512]);
 
             alias j S7;
@@ -120,7 +118,7 @@ if(sysCallNo == 4) then
                 [j + 512] = "";
                 j = j + 1;
             endwhile;
-            store(1, [i + 512]);
+            store(1, dataBlock);
 
             [DISK_LIST + [i + 512]] = 0;
         endif;

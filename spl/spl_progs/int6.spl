@@ -1,0 +1,71 @@
+alias physicalSP S0;
+physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+
+alias sysCallNo S1;
+sysCallNo = [physicalSP - 1];
+
+if(sysCallNo == 9) then
+    print "in fork";
+
+    alias fileName S2;
+    fileName = [physicalSP - 3];
+
+    alias i S3;
+    i = 0;
+
+    while(i < 64 && [FAT + i * 8] != filename) do
+        i = i + 1;
+    endwhile;
+
+    if(i == 64) then
+        [physicalSP - 2] = 0;
+        ireturn;
+    endif;
+
+    alias codePages S4;
+    i = 0;
+
+    alias fileSize S5;
+    fileSize = [FAT + i * 8 + 1];
+
+    codePages = fileSize / 512;
+
+    if(codePages > 3) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    alias freePages S5;
+    freePages = 0;
+
+    i = 0;
+    while(i < 8) do
+        if([PTBR + i + 1] == "01" || [PTBR + i + 1] == "11") then
+            [MEM_LIST + [PTBR + i]] = 0;
+        endif;
+        [PTBR + i] = -1;
+        [PTBR + i + 1] = "00";
+        i = i + 2;
+    endwhile;
+
+    i = 0;
+    while([MEM_LIST + i] == 0 && i < 64) do
+        freePages = freePages + 1;
+        i = i + 1;
+    endwhile;
+
+    if(freePages < codePages) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    j = 0;
+    while(i < 8) do
+        while([MEM_LIST + j] != 0 && j < 64) do
+            j = j + 1;
+        endwhile;
+        [MEM_LIST + j] = 1;
+        [PTBR + i + 0] = j;
+        [PTBR + i + 1] = "01";
+    endwhile;
+

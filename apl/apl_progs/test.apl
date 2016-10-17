@@ -16,10 +16,10 @@ integer main()
     a = Create("temp2.dat");
     des6 = Open("temp2.dat");
 
-    a = Seek(des1, 0);
-    a = Seek(des2, 0);
-    a = Seek(des3, 0);
-    a = Seek(des4, 0);
+ //   a = Seek(des1, 0);
+   // a = Seek(des2, 0);
+  //  a = Seek(des3, 0);
+  //  a = Seek(des4, 0);
 
     i = 0;
     while i < 25 do
