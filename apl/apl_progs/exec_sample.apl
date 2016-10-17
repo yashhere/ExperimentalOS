@@ -1,19 +1,26 @@
+decl
+    integer status;
+enddecl
 integer main()
 {
-    integer pid;
+    print("current pid");
+    status = Getpid();
+    print(status);
 
-    print ("Before Fork");
-    pid = Fork();
-    integer e,a;
-    if(pid == -2) then
-        e = Exec("odd.xsm");
-        print(e);
-    else
-        a=0;
-        while(a<=10) do
-            print(a);
-            a=a+2;
-        endwhile;
+    print("parent pid");
+    status = Getppid();
+    print(status);
+
+    print("before fork");
+    status = Fork();
+    print(status);
+    print("after fork");
+
+    if (status == -2) then
+        print(" Exec in action");
+        status = Exec("odd.xsm");
     endif;
+
+    print("Parent process.");
     return 0;
 }

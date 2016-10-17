@@ -123,3 +123,25 @@ if(sysCallNo == 9) then
 
     ireturn;
 endif;
+
+if(sysCallNo == 11) then
+    alias currentPID S2;
+    currentPID = (PTBR - 1024) / 8;
+    [physicalSP - 2] = currentPID;
+    ireturn;
+endif;
+
+if(sysCallNo == 12) then
+    alias currentPID S2;
+    currentPID = (PTBR - 1024) / 8;
+    alias currentPCB S3;
+    currentPCB = READY_LIST + currentPID * 32;
+
+    if([currentPCB + 31] < 0 || [currentPCB + 31] > 31) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    [physicalSP - 2] = [currentPCB + 31];
+    ireturn;
+endif;

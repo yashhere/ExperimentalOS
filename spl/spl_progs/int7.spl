@@ -4,12 +4,32 @@ physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
 alias sysCallNo S1;
 sysCallNo = [physicalSP - 1];
 
-if(sysCallNo == 10) then
+if(sysCallNo == 10 || sysCallNo == 14) then
     alias fileName S2;
     fileName = [physicalSP - 3];
 
-    alias i S3;
+    alias newPID S10;
+    newPID = (PTBR - 1024) / 8;
+
+    alias newPCB S11;
     alias counter S4;
+    counter = 0;
+
+    while(counter < 32) do
+        newPID = (newPID + 1) % 32;
+        newPCB = READY_LIST + newPID * 32;
+        if([newPCB + 1] == (100 + ((PTBR - 1024) / 8))) then
+            [newPCB + 1] = 1;
+        endif;
+        counter = counter + 1;
+    endwhile;
+
+    if(sysCallNo == 14) then
+        [physicalSP - 2] = 0;
+        ireturn;
+    endif;
+
+    alias i S3;
     i = 0;
     counter = 0 ;
 
@@ -66,7 +86,6 @@ if(sysCallNo == 10) then
         i = (i + 1) % 32;
     endwhile;
 
-    alias newPCB S8;
     newPCB = READY_LIST + i * 32;
 
     BP = [newPCB + 2];
@@ -87,5 +106,74 @@ if(sysCallNo == 10) then
     newPhysicalSP = ([PTBR + 2 * (SP / 512) + 0] * 512) + (SP % 512);
     [newPhysicalSP] = [newPCB + 4];
     [newPCB + 1] = 2;
+    ireturn;
+endif;
+
+if(sysCallNo == 13) then
+    alias waitingPID S2;
+    waitingPID = [physicalSP - 3];
+
+    alias PCB S3;
+    PCB = READY_LIST + 32 * waitingPID;
+
+    if([PCB + 1] == 0 || [PCB + 1] == 2) then
+        [physicalSP - 2] = -1;
+        ireturn;
+    endif;
+
+    alias currentPCB S4;
+    currentPCB = READY_LIST + ((PTBR - 1024) / 8) * 32;
+
+    [currentPCB + 1] = 100 + waitingPID;
+
+    alias counter S5;
+    counter = 0;
+
+    while(counter < 32 && [READY_LIST + counter * 32 + 1] != 1) do
+        counter = counter + 1;
+    endwhile;
+
+    alias newPID S6;
+    newPID = counter;
+
+    [currentPCB + 2] = BP;
+    [currentPCB + 3] = SP - 1;
+    [currentPCB + 4] = [physicalSP];
+    [currentPCB + 5] = PTBR;
+    [currentPCB + 6] = PTLR;
+    [currentPCB + 7] = R0;
+    [currentPCB + 8] = R1;
+    [currentPCB + 9] = R2;
+    [currentPCB + 10] = R3;
+    [currentPCB + 11] = R4;
+    [currentPCB + 12] = R5;
+    [currentPCB + 13] = R6;
+    [currentPCB + 14] = R7;
+
+    alias newPCB S7;
+    newPCB = READY_LIST + newPID * 32;
+
+    BP = [newPCB + 2];
+    SP = [newPCB + 3];
+    PTBR = [newPCB + 5];
+    PTLR = [newPCB + 6];
+    R0 = [newPCB + 7];
+    R1 = [newPCB + 8];
+    R2 = [newPCB + 9];
+    R3 = [newPCB + 10];
+    R4 = [newPCB + 11];
+    R5 = [newPCB + 12];
+    R6 = [newPCB + 13];
+    R7 = [newPCB + 14];
+
+    SP = SP + 1;
+    alias newPhysicalSP S8;
+    newPhysicalSP = ([PTBR + (SP / 512) * 2] * 512) + (SP % 512);
+
+    [newPhysicalSP] = [newPCB + 4];
+
+    [newPCB + 1] = 2;
+
+    [physicalSP - 2] = 0;
     ireturn;
 endif;

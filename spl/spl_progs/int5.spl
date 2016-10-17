@@ -107,6 +107,8 @@ if(sysCallNo == 8) then
         counter = counter + 1;
     endwhile;
 
+    [READY_LIST + pcbIndex * 32 + 31] = ((PTBR - 1024) / 8);
+
     [physicalSP - 2] = pcbIndex;
 
     alias childPhysicalSP S10;
