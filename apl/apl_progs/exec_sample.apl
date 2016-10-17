@@ -6,12 +6,11 @@ integer main()
     pid = Fork();
     integer e,a;
     if(pid == -2) then
-        print("hello");
         e = Exec("odd.xsm");
+        print(e);
     else
         a=0;
-        print("hello1");
-        while(a<=20) do
+        while(a<=10) do
             print(a);
             a=a+2;
         endwhile;

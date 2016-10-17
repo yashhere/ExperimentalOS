@@ -1,10 +1,9 @@
-integer main() {
-    integer i;
-    while(i <= 20) do
-        if(i % 2 != 0) then
-            print(i);
-        endif;
-        i = i + 1;
-    endwhile;
+integer main()
+{
+    print(1);
+    print(3);
+    print(5);
+    print(7);
+    print(9);
     return 0;
 }

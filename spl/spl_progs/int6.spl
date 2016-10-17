@@ -5,67 +5,121 @@ alias sysCallNo S1;
 sysCallNo = [physicalSP - 1];
 
 if(sysCallNo == 9) then
-    print "in fork";
-
     alias fileName S2;
     fileName = [physicalSP - 3];
 
-    alias i S3;
-    i = 0;
+    alias fatIndex S3;
+    fatIndex = 0;
 
-    while(i < 64 && [FAT + i * 8] != filename) do
-        i = i + 1;
+    while(fatIndex < 64 && [FAT + fatIndex * 8] != fileName) do
+        fatIndex = fatIndex + 1;
     endwhile;
 
-    if(i == 64) then
-        [physicalSP - 2] = 0;
+    if(fatIndex == 64) then
+        [physicalSP - 2] = -1;
         ireturn;
     endif;
 
+    load(1, [FAT + fatIndex * 8 + 2]);
+
     alias codePages S4;
-    i = 0;
+    alias counter S5;
+    counter = 0;
+    codePages = 0;
 
-    alias fileSize S5;
-    fileSize = [FAT + i * 8 + 1];
-
-    codePages = fileSize / 512;
+    while(counter < 256) do
+        if([SCRATCHPAD + counter] != -1) then
+            codePages = codePages + 1;
+        else
+            break;
+        endif;
+        counter = counter + 1;
+    endwhile;
 
     if(codePages > 3) then
         [physicalSP - 2] = -1;
         ireturn;
     endif;
 
-    alias freePages S5;
-    freePages = 0;
+    alias validPages S6;
+    validPages = 0;
 
-    i = 0;
-    while(i < 8) do
-        if([PTBR + i + 1] == "01" || [PTBR + i + 1] == "11") then
-            [MEM_LIST + [PTBR + i]] = 0;
+    counter = 0;
+    while(counter < 6) do
+        if([PTBR + counter + 1] == "01" || [PTBR + counter + 1] == "11") then
+            validPages = validPages + 1;
         endif;
-        [PTBR + i] = -1;
-        [PTBR + i + 1] = "00";
-        i = i + 2;
+        counter = counter + 2;
     endwhile;
 
-    i = 0;
-    while([MEM_LIST + i] == 0 && i < 64) do
-        freePages = freePages + 1;
-        i = i + 1;
-    endwhile;
-
-    if(freePages < codePages) then
-        [physicalSP - 2] = -1;
-        ireturn;
+    if(validPages > codePages) then
+        while(validPages != codePages) do
+            validPages = validPages - 1;
+            [PTBR + validPages * 2 + 1] = "00";
+            [PTBR + validPages * 2 + 0] = -1;
+        endwhile;
     endif;
 
-    j = 0;
-    while(i < 8) do
-        while([MEM_LIST + j] != 0 && j < 64) do
-            j = j + 1;
+    alias difference S7;
+    if(validPages < codePages) then
+        difference = codePages - validPages;
+        counter = 0;
+        while(counter < 64 && difference > 0) do
+            if([MEM_LIST + counter] == 0) then
+                difference = difference - 1;
+            endif;
+            counter = counter + 1;
         endwhile;
-        [MEM_LIST + j] = 1;
-        [PTBR + i + 0] = j;
-        [PTBR + i + 1] = "01";
+
+        if(counter == 64) then
+            [physicalSP - 2] = -1;
+            ireturn;
+        endif;
+
+        difference = codePages - validPages;
+        counter = 0;
+
+        while(counter < 64 && difference > 0) do
+            if([MEM_LIST + counter] == 1) then
+                counter = counter + 1;
+            else
+                [MEM_LIST + counter] = 1;
+                [PTBR + (codePages - difference) * 2 + 1] = "01";
+                [PTBR + (codePages - difference) * 2 + 0] = counter;
+
+                difference = difference - 1;
+                counter = counter + 1;
+            endif;
+        endwhile;
+    endif;
+
+    counter = 0;
+    while(counter < codePages) do
+        load([PTBR + counter * 2], [SCRATCHPAD + counter]);
+        counter = counter + 1;
     endwhile;
 
+    alias currentPCB S8;
+    currentPCB = READY_LIST + ((PTBR - 1024) / 8) * 32;
+
+    counter = 0;
+    while(counter < 8) do
+        if([currentPCB + counter * 2 + 15] != -1) then
+            [FILE_TABLE + [currentPCB + counter * 2 + 15] * 2 + 1] = [FILE_TABLE + [currentPCB + counter * 2 + 15] * 2 + 1] - 1;
+            if([FILE_TABLE + [currentPCB + counter * 2 + 15] * 2 + 1] == 0) then
+                [FILE_TABLE + [currentPCB + counter * 2 + 15] * 2] = -1;
+            endif;
+            [currentPCB + counter * 2 + 15 + 0] = -1;
+            [currentPCB + counter * 2 + 15 + 1] = -1;
+        endif;
+        counter = counter + 1;
+    endwhile;
+
+    SP = 3 * 512;
+    [physicalSP - 2] = 1;
+
+    physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
+    [physicalSP] = 0;
+
+    ireturn;
+endif;

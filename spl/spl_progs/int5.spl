@@ -5,7 +5,6 @@ alias sysCallNo S1;
 sysCallNo = [physicalSP - 1];
 
 if(sysCallNo == 8) then
-    print "in fork";
     alias pcbIndex S2;
     pcbIndex = 0;
     while(pcbIndex < 32 && [READY_LIST + 32 * pcbIndex + 1] != 0) do

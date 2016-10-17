@@ -5,7 +5,6 @@ alias sysCallNo S1;
 sysCallNo = [physicalSP - 1];
 
 if(sysCallNo == 10) then
-    print "in exit";
     alias fileName S2;
     fileName = [physicalSP - 3];
 
