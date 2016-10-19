@@ -3,19 +3,16 @@ load(8, 2);
 load(23,17);
 load(24,18);
 [READY_LIST + 0] = 0;
-load(25, 21);
-load(26, 22);
-load(27, 23);
 PTBR = 1024;
 PTLR = 4;
 [PTBR + 0] = 25;
-[PTBR + 1] = "01";
+[PTBR + 1] = "00";
 [PTBR + 2] = 26;
-[PTBR + 3] = "01";
+[PTBR + 3] = "00";
 [PTBR + 4] = 27;
-[PTBR + 5] = "01";
+[PTBR + 5] = "00";
 [PTBR + 6] = 28;
-[PTBR + 7] = "01";
+[PTBR + 7] = "00";
 [READY_LIST + 1] = 2;
 SP = 3 * 512;
 [28 * 512] = 0;
@@ -54,9 +51,8 @@ load(10,4);
 
 //fat and disk free list
 load(5, 19);
-load(6,20);
+load(6, 20);
 
-breakpoint;
 alias counter S0;
 
 // FILE_TABLE = 1344
@@ -70,13 +66,28 @@ endwhile;
 //MEM_LIST = 1280
 counter = 0;
 while(counter < 64) do
-    if(counter < 29) then
+    if(counter < 24) then
         [MEM_LIST + counter] = 1;
     else
-        [MEM_LIST + counter] = 0;
+        if(counter == 29) then
+            [MEM_LIST + counter] = 1;
+        else
+            [MEM_LIST + counter] = 0;
+        endif;
     endif;
     counter = counter + 1;
 endwhile;
+
+alias disk_list S1;
+disk_list = 5 * 512;
+counter = 448;
+
+while(counter < 512) do
+    [disk_list + counter] = 0;
+    counter = counter + 1;
+endwhile;
+
+store(6, 20);
 
 counter = 15;
 while(counter <= 30) do
