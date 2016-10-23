@@ -1,0 +1,151 @@
+alias Cause S0;
+Cause = EFR % 10;               // Gets value of cause field (size 1 char)
+print Cause;
+
+alias VPagenum S1;
+VPagenum = (EFR / 10) % 100;    // Gets value of BadVAddr
+print VPagenum;
+
+alias Ip_addr S2;
+Ip_addr = (EFR / 1000);         // Gets value of IP at the point of exception
+print Ip_addr;
+
+alias physicalSP S11;
+physicalSP = (([PTBR + (SP / 512) * 2] * 512) + (SP % 512));
+print physicalSP;
+
+if(Cause != 0) then
+    if(Cause == 1) then
+        print("Illegal Instruction");
+    endif;
+
+    if(Cause == 2) then
+        print("Illegal Memory Access");
+    endif;
+
+    if(Cause == 3) then
+        print("Arithmetic Exception");
+    endif;
+
+    if(Cause == 4) then
+        print("Illegal Operands");
+    endif;
+
+    SP = SP + 1;
+    [physicalSP] = 10;
+    inline "JMP 11776";
+    ireturn;
+endif;
+
+if([PTBR + VPagenum * 2 + 0] == -1) then
+    SP = SP + 1;
+    [physicalSP] = 10;
+    inline "JMP 11776";
+endif;
+
+alias counter S3;
+counter = 0;
+
+alias freePage S4;
+freePage = 0;
+
+while(counter < 64) do
+    if([MEM_LIST + counter] == 0) then
+        [MEM_LIST + counter] = [MEM_LIST + counter] + 1;
+        freePage = counter;
+        break;
+    endif;
+    counter = counter + 1;
+endwhile;
+
+alias index S5;
+
+alias currentPID S6;
+currentPID = (PTBR - 1024) / 8;
+
+alias page S7;
+page = PTBR + VPagenum * 2;
+
+alias physicalPage S8;
+
+// there can be at most 32 page tables of 4 entries. each entry of two words. So at most 256 words
+if(counter == 64) then
+    while(1 == 1) do
+        // skipping stack page
+        if(((page - 1024) % 8) == 2) then
+            page = page + 2;        // can't we use modulo here.
+            if(page == 1280) then
+                page = 1024;
+            endif;
+            continue;
+        endif;
+
+        if([page + 1] == "01" || [page + 1] == "11") then
+            if([MEM_LIST + [page + 0]] > 1) then
+                page = page + 2;
+                if(page == 1280) then
+                    page = 1024;
+                endif;
+                continue;
+            endif;
+
+            if([page + 1] == "11") then
+                [page + 1] = "01";
+            else
+                index = 448;
+                while(index < 512) do
+                    if([DISK_LIST + index] == 0) then
+                        break;
+                    endif;
+                    index = index + 1;
+                endwhile;
+
+                if(index == 512) then
+                    SP = SP + 1;
+                    [physicalSP] = 10;
+                    inline "JMP 11776";
+                    ireturn;
+                endif;
+
+                store([page], index);
+
+                physicalPage = [page];
+
+                [DISK_LIST + counter] = [DISK_LIST + counter] + 1;
+                store(6, 20);
+                [page] = index;
+                [page + 1] = "00";
+            endif;
+        endif;
+        page = page + 2;
+        if(page == 1280) then
+            page = 1024;
+        endif;
+    endwhile;
+endif;
+
+alias PVPagenum S9;
+PVPagenum = [PTBR + VPagenum * 2];
+
+if(PVPagenum > 20 && PVPagenum < 448) then
+    load(freePage, PVPagenum);
+endif;
+
+if(PVPagenum >= 448) then
+    load(freePage, PVPagenum);
+    [DISK_LIST + PVPagenum] = [DISK_LIST + PVPagenum] - 1;
+    store(6, 20);
+endif;
+
+print "here";
+
+[PTBR + VPagenum * 2 + 0] = freePage;
+[PTBR + VPagenum * 2 + 1] = "11";
+
+SP = SP + 1;
+physicalSP = (([PTBR + (SP / 512)] * 512) + (SP % 512));
+
+[physicalSP] = Ip_addr;
+print Ip_addr;
+print "here1";
+ireturn;

@@ -22,11 +22,26 @@ if(sysCallNo == 9) then
 
     load(1, [FAT + fatIndex * 8 + 2]);
 
-    alias codePages S4;
-    alias counter S5;
+    alias counter S4;
     counter = 0;
-    codePages = 0;
 
+    while(counter < 6) do
+        if([PTBR + counter * 2 + 1] == "01" || [PTBR + counter * 2 + 1] == "11") then
+            [MEM_LIST + [PTBR + counter * 2 + 0]] = [MEM_LIST + [PTBR + counter * 2 + 0]] - 1;
+        endif;
+
+        if([PTBR + counter * 2 + 1] == "00" && [PTBR + counter * 2 + 0] >= 448) then
+            [DISK_LIST + [PTBR + counter * 2 + 0]] = [DISK_LIST + [PTBR + counter * 2 + 0]] - 1;
+            store(6, 20);
+
+        endif;
+        counter = counter + 1;
+    endwhile;
+
+    alias codePages S5;
+
+    codePages = 0;
+    counter = 0;
     while(counter < 256) do
         if([SCRATCHPAD + counter] != -1) then
             codePages = codePages + 1;
@@ -41,63 +56,20 @@ if(sysCallNo == 9) then
         ireturn;
     endif;
 
-    alias validPages S6;
-    validPages = 0;
-
-    counter = 0;
-    while(counter < 6) do
-        if([PTBR + counter + 1] == "01" || [PTBR + counter + 1] == "11") then
-            validPages = validPages + 1;
-        endif;
-        counter = counter + 2;
-    endwhile;
-
-    if(validPages > codePages) then
-        while(validPages != codePages) do
-            validPages = validPages - 1;
-            [PTBR + validPages * 2 + 1] = "00";
-            [PTBR + validPages * 2 + 0] = -1;
-        endwhile;
-    endif;
-
-    alias difference S7;
-    if(validPages < codePages) then
-        difference = codePages - validPages;
-        counter = 0;
-        while(counter < 64 && difference > 0) do
-            if([MEM_LIST + counter] == 0) then
-                difference = difference - 1;
-            endif;
-            counter = counter + 1;
-        endwhile;
-
-        if(counter == 64) then
-            [physicalSP - 2] = -1;
-            ireturn;
-        endif;
-
-        difference = codePages - validPages;
-        counter = 0;
-
-        while(counter < 64 && difference > 0) do
-            if([MEM_LIST + counter] == 1) then
-                counter = counter + 1;
-            else
-                [MEM_LIST + counter] = 1;
-                [PTBR + (codePages - difference) * 2 + 1] = "01";
-                [PTBR + (codePages - difference) * 2 + 0] = counter;
-
-                difference = difference - 1;
-                counter = counter + 1;
-            endif;
-        endwhile;
-    endif;
-
     counter = 0;
     while(counter < codePages) do
-        load([PTBR + counter * 2], [SCRATCHPAD + counter]);
+        [PTBR + counter * 2 + 0] = [SCRATCHPAD + counter];
+        [PTBR + counter * 2 + 1] = "00";
         counter = counter + 1;
     endwhile;
+
+    while(counter < 3) do
+        [PTBR + counter * 2 + 0] = -1;
+        [PTBR + counter * 2 + 1] = "00";
+        counter = counter + 1;
+    endwhile;
+
+    [PTBR + 7] = "01";
 
     alias currentPCB S8;
     currentPCB = READY_LIST + ((PTBR - 1024) / 8) * 32;

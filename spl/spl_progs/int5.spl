@@ -29,21 +29,24 @@ if(sysCallNo == 8) then
         counter = counter + 1;
     endwhile;
 
-    alias mem_pages S5;
-    mem_pages = 0;
+    alias mem_page S5;
+    mem_page = 0;
     counter = 0;
 
     while(counter < 64) do
         if([MEM_LIST + counter] == 0) then
-            mem_pages = mem_pages + 1;
+            mem_page = counter;
+            break;
         endif;
         counter = counter + 1;
     endwhile;
 
-    if(mem_pages < valid_pages) then
+    if(counter == 64) then
         [physicalSP - 2] = -1;
         ireturn;
     endif;
+
+    [MEM_LIST + mem_page] = 1;
 
     alias childPTBR S7;
     alias parentPTBR S8;
@@ -51,33 +54,33 @@ if(sysCallNo == 8) then
     childPTBR = PAGE_TABLE + pcbIndex * 8;
     parentPTBR = PTBR;
 
+    [childPTBR + 6] = mem_page;
+    [childPTBR + 7] = "01";
+
     alias counter2 S9;
     alias i S10;
 
-    counter2 = 0;
-    counter = 25;
+    i = 0;
+    while(i < 512) do
+        [[childPTBR + 6] * 512 + i] = [[childPTBR + 6] * 512 + i];
+        i = i + 1;
+    endwhile;
 
-    while(counter2 < 8) do
-        if([MEM_LIST + counter] == 0) then
-            if([PTBR + counter2 + 1] == "01" || [PTBR + counter2 + 1] == "11") then
-                [MEM_LIST + counter] = 1;
-                [childPTBR + counter2 + 1] = [PTBR + counter2 + 1];
-                [childPTBR + counter2] = counter;
+    i = 0;
 
-                i = 0;
-                while(i < 512) do
-                    [[childPTBR + counter2] * 512 + i] = [[parentPTBR + counter2] * 512 + i];
-                    i = i + 1;
-                endwhile;
+    while(i < 3) do
+        [childPTBR + i * 2 + 0] = [parentPTBR + i * 2 + 0];
+        [childPTBR + i * 2 + 1] = [parentPTBR + i * 2 + 1];
 
-                counter = counter + 1;
-                counter2 = counter2 + 2;
-            else
-                counter2 = counter2 + 2;
-            endif;
-        else
-            counter = counter + 1;
+        if([parentPTBR + i * 2 + 1] == "01" || [parentPTBR + i * 2 + 1] == "11") then
+            [MEM_LIST + [parentPTBR + i * 2 + 0]] = [MEM_LIST + [parentPTBR + i * 2 + 0]] + 1;
         endif;
+
+        if([parentPTBR + i * 2 + 1] == "00" && [parentPTBR + i * 2 + 0] >= 448) then
+            [DISK_LIST + [parentPTBR + i * 2 + 0]] = [DISK_LIST + [parentPTBR + i * 2 + 0] ] + 1;
+            store(6, 20);
+        endif;
+        i = i + 1;
     endwhile;
 
     [READY_LIST + pcbIndex * 32 + 1] = 1;
