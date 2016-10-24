@@ -1,9 +1,10 @@
 integer main()
 {
-    print(1);
-    print(3);
-    print(5);
-    print(7);
-    print(9);
+    integer a;
+    a=1;
+        while(a<=40) do
+            print(a);
+            a=a+2;
+        endwhile;
     return 0;
 }

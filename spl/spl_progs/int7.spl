@@ -33,10 +33,10 @@ if(sysCallNo == 10) then
     counter = 15;
     while(counter < 31) do
         if([currentPCB + counter] != -1) then
-            [FILE_TABLE + [currentPCB + counter] + 1] = [FILE_TABLE + [currentPCB + counter] + 1] - 1;
+            [FILE_TABLE + [currentPCB + counter] * 2 + 1] = [FILE_TABLE + [currentPCB + counter] * 2 + 1] - 1;
 
-            if([FILE_TABLE + [currentPCB + counter] + 1] == 0) then
-                [FILE_TABLE + [currentPCB + counter] + 0] = -1;
+            if([FILE_TABLE + [currentPCB + counter] * 2 + 1] == 0) then
+                [FILE_TABLE + [currentPCB + counter] * 2 + 0] = -1;
             endif;
 
             [currentPCB + counter + 0] = -1;

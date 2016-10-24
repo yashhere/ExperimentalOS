@@ -10,7 +10,7 @@ integer main()
         print(e);
     else
         a=0;
-        while(a<=10) do
+        while(a<=40) do
             print(a);
             a=a+2;
         endwhile;
