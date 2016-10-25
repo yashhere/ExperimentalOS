@@ -66,53 +66,52 @@ endwhile;
 
 // there can be at most 32 page tables of 4 entries. each entry of two words. So at most 256 words
 if(freePage == 64) then
-    alias pTableEntry S6;
-    pTableEntry = PTBR + VPagenum*2;
-    while (1 == 1) do
-        pTableEntry = pTableEntry + 2;
-        //make it look circular
-        if (pTableEntry == 1280) then
-            pTableEntry = PAGE_TABLE;
-            continue;
-        endif;
-        //ignore stack
-        if ((pTableEntry - (PAGE_TABLE + 6)) % 8 == 0) then
+    alias pageTableEntry S6;
+    pageTableEntry = PTBR + VPagenum*2;
+    while (1) do
+        pageTableEntry = pageTableEntry + 2;
+        if (pageTableEntry == 1280) then
+            pageTableEntry = 1024;
             continue;
         endif;
 
-        if ([pTableEntry + 1] == "11") then
-            [pTableEntry + 1] = "01";
+        if ((pageTableEntry - 1024) % 8 == 6) then
             continue;
         endif;
 
-        if ([pTableEntry + 1] == "00") then
+        if ([pageTableEntry + 1] == "11") then
+            [pageTableEntry + 1] = "01";
             continue;
         endif;
-        //You can't swap out this page if it is referened by some other process
-        if ([MEM_LIST + [pTableEntry]] != 1) then      //What will happen if all pages are referenced by atleast one process?
+
+        if ([pageTableEntry + 1] == "00") then
             continue;
         endif;
-        // [pTableEntry + 1] == "01" // Swap out victim page idetified!
+
+        if ([MEM_LIST + [pageTableEntry]] != 1) then
+            continue;
+        endif;
+
         break;
     endwhile;
-        // Scan for a free block in swap
-        alias freeSwapBlock S7;
-        freeSwapBlock = 448;
-        while (freeSwapBlock < 512) do
-            if ([DISK_LIST + freeSwapBlock] == 0) then
-                [DISK_LIST + freeSwapBlock] = 1;
-                break;
-            endif;
-            freeSwapBlock = freeSwapBlock + 1;
-        endwhile;
-        if (freeSwapBlock == 512) then
-            print("Swap Full");
-            halt;
+
+    alias freeBlock S7;
+    freeBlock = 448;
+    while (freeBlock < 512) do
+        if ([DISK_LIST + freeBlock] == 0) then
+            [DISK_LIST + freeBlock] = 1;
+            break;
         endif;
-        store([pTableEntry], freeSwapBlock);
-        freePage = [pTableEntry];
-        [pTableEntry] = freeSwapBlock;
-        [pTableEntry + 1] = "00";
+        freeBlock = freeBlock + 1;
+    endwhile;
+    if (freeBlock == 512) then
+        print("Swap Full");
+        halt;
+    endif;
+    store([pageTableEntry], freeBlock);
+    freePage = [pageTableEntry];
+    [pageTableEntry] = freeBlock;
+    [pageTableEntry + 1] = "00";
 endif;
 
 alias PVPagenum S9;
