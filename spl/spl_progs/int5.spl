@@ -16,71 +16,101 @@ if(sysCallNo == 8) then
         ireturn;
     endif;
 
-    [READY_LIST + pcbIndex * 32 + 0] = pcbIndex;
-
-    alias valid_pages S3;
-    alias counter S4;
-    valid_pages = 0;
-    counter = 1;
-    while(counter < 8) do
-        if([PTBR + counter] == "01" || [PTBR + counter] == "11") then
-            valid_pages = valid_pages + 1;
-        endif;
-        counter = counter + 1;
-    endwhile;
-
-    alias mem_page S5;
-    mem_page = 0;
+    alias counter S15;
     counter = 0;
 
+    [READY_LIST + pcbIndex * 32 + 0] = pcbIndex;
+
+    counter = 0;
     while(counter < 64) do
         if([MEM_LIST + counter] == 0) then
-            mem_page = counter;
             break;
         endif;
         counter = counter + 1;
     endwhile;
 
     if(counter == 64) then
-        [physicalSP - 2] = -1;
-        ireturn;
+        alias pageTableEntry S7;
+        pageTableEntry = 1022;
+        while (1 == 1) do
+            pageTableEntry = pageTableEntry + 2;
+
+            if (pageTableEntry == 1280) then
+                pageTableEntry = 1022;
+                continue;
+            endif;
+
+            if ((pageTableEntry - 1024) % 8 == 6) then
+                continue;
+            endif;
+
+            if ([pageTableEntry + 1] == "11") then
+                [pageTableEntry + 1] = "01";
+                continue;
+            endif;
+
+            if ([pageTableEntry + 1] == "00") then
+                continue;
+            endif;
+
+            if ([MEM_LIST + [pageTableEntry]] != 1) then
+                continue;
+            endif;
+
+            break;
+        endwhile;
+
+        alias freeBlock S8;
+        freeBlock = 448;
+        while (freeBlock < 512) do
+            if ([DISK_LIST + freeBlock] == 0) then
+                [DISK_LIST + freeBlock] = 1;
+                break;
+            endif;
+            freeBlock = freeBlock + 1;
+        endwhile;
+
+        if (freeBlock == 512) then
+            print("Swap Full");
+            halt;
+        endif;
+        store([pageTableEntry], freeBlock);
+        counter = [pageTableEntry];
+        [pageTableEntry] = freeBlock;
+        [pageTableEntry + 1] = "00";
     endif;
 
-    [MEM_LIST + mem_page] = 1;
+    alias newStack S4;
+    newStack = counter;
+    [MEM_LIST + newStack] = 1;
 
+    alias oldStack S5;
+    oldStack = [PTBR + 6];
+    counter = 0;
+    while(counter < 512) do
+        [newStack*512 + counter] = [oldStack*512 + counter];
+        counter = counter + 1;
+    endwhile;
     alias childPTBR S7;
     alias parentPTBR S8;
 
     childPTBR = PAGE_TABLE + pcbIndex * 8;
     parentPTBR = PTBR;
 
-    [childPTBR + 6] = mem_page;
+    [childPTBR + 6] = newStack;
     [childPTBR + 7] = "01";
 
-    alias counter2 S9;
-    alias i S10;
-
-    i = 0;
-    while(i < 512) do
-        [[childPTBR + 6] * 512 + i] = [[childPTBR + 6] * 512 + i];
-        i = i + 1;
-    endwhile;
-
-    i = 0;
-
-    while(i < 3) do
-        [childPTBR + i * 2 + 0] = [parentPTBR + i * 2 + 0];
-        [childPTBR + i * 2 + 1] = [parentPTBR + i * 2 + 1];
-
-        if([parentPTBR + i * 2 + 1] == "01" || [parentPTBR + i * 2 + 1] == "11") then
-            [MEM_LIST + [parentPTBR + i * 2 + 0]] = [MEM_LIST + [parentPTBR + i * 2 + 0]] + 1;
+    counter = 0;
+    while(counter < PTLR - 1) do
+        [childPTBR + counter*2] = [PTBR + counter*2];
+        [childPTBR + counter*2 + 1] = [PTBR + counter*2 +1];
+        if([childPTBR + counter*2 + 1] == "01" || [childPTBR + counter*2 + 1] == "11") then
+            [MEM_LIST + [childPTBR + counter*2]] = [MEM_LIST + [childPTBR + counter*2]] + 1;
         endif;
-
-        if([parentPTBR + i * 2 + 1] == "00" && [parentPTBR + i * 2 + 0] >= 448) then
-            [DISK_LIST + [parentPTBR + i * 2 + 0]] = [DISK_LIST + [parentPTBR + i * 2 + 0] ] + 1;
-            store(6, 20);
+        if([childPTBR + counter*2 + 1] == "00" && [childPTBR + counter*2] >= 448) then
+            [DISK_LIST + [childPTBR + counter*2]] = [DISK_LIST + [childPTBR + counter*2]] + 1;
         endif;
-        i = i + 1;
+        counter = counter + 1;
     endwhile;
 
     [READY_LIST + pcbIndex * 32 + 1] = 1;
@@ -104,10 +134,10 @@ if(sysCallNo == 8) then
         [READY_LIST + pcbIndex * 32 + counter] = [READY_LIST + ((PTBR - 1024) * 32) / 8 + counter];
         [READY_LIST + pcbIndex * 32 + counter + 1] = [READY_LIST + ((PTBR - 1024) * 32) / 8 + counter + 1];
 
-        if([READY_LIST + pcbIndex * 32 + counter] != -1) then
-            [FILE_TABLE + [READY_LIST + pcbIndex * 32 + counter] * 2 + 1] = [FILE_TABLE + [READY_LIST + pcbIndex * 32 + counter] * 2 + 1] + 1;
+        if([READY_LIST + ((PTBR - 1024) * 32) / 8 + counter] != -1) then
+            [FILE_TABLE + [READY_LIST + ((PTBR - 1024) * 32) / 8 + counter] * 2 + 1] = [FILE_TABLE + [READY_LIST + ((PTBR - 1024) * 32) / 8 + counter] * 2 + 1] + 1;
         endif;
-        counter = counter + 1;
+        counter = counter + 2;
     endwhile;
 
     [READY_LIST + pcbIndex * 32 + 31] = ((PTBR - 1024) / 8);

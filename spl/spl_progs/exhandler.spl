@@ -1,18 +1,14 @@
 alias Cause S0;
 Cause = EFR % 10;               // Gets value of cause field (size 1 char)
-print Cause;
 
 alias VPagenum S1;
 VPagenum = (EFR / 10) % 100;    // Gets value of BadVAddr
-print VPagenum;
 
 alias Ip_addr S2;
 Ip_addr = (EFR / 1000);         // Gets value of IP at the point of exception
-print Ip_addr;
 
 alias physicalSP S11;
 physicalSP = (([PTBR + (SP / 512) * 2] * 512) + (SP % 512));
-print physicalSP;
 
 if(Cause != 0) then
     if(Cause == 1) then
@@ -31,16 +27,17 @@ if(Cause != 0) then
         print("Illegal Operands");
     endif;
 
-    SP = SP + 1;
-    [physicalSP] = 10;
-    inline "JMP 11776";
-    ireturn;
+    SP = SP + 2;
+    physicalSP = [PTBR + 2 * SP/512]*512 + SP%512;
+    [physicalSP - 1] = 10;
+    inline "JMP 3584";
 endif;
 
 if([PTBR + VPagenum * 2 + 0] == -1) then
-    SP = SP + 1;
-    [physicalSP] = 10;
-    inline "JMP 11776";
+    SP = SP + 2;
+    physicalSP = [PTBR + 2 * SP/512]*512 + SP%512;
+    [physicalSP - 1] = 10;
+    inline "JMP 3584";
 endif;
 
 alias counter S3;
@@ -48,15 +45,6 @@ counter = 0;
 
 alias freePage S4;
 freePage = 0;
-
-while(counter < 64) do
-    if([MEM_LIST + counter] == 0) then
-        [MEM_LIST + counter] = [MEM_LIST + counter] + 1;
-        freePage = counter;
-        break;
-    endif;
-    counter = counter + 1;
-endwhile;
 
 alias index S5;
 
@@ -68,60 +56,62 @@ page = PTBR + VPagenum * 2;
 
 alias physicalPage S8;
 
+while(freePage < 64) do
+    if([MEM_LIST + freePage] == 0) then
+        [MEM_LIST + freePage] = 1;
+        break;
+    endif;
+    freePage = freePage + 1;
+endwhile;
+
 // there can be at most 32 page tables of 4 entries. each entry of two words. So at most 256 words
-if(counter == 64) then
-    while(1 == 1) do
-        // skipping stack page
-        if(((page - 1024) % 8) == 2) then
-            page = page + 2;        // can't we use modulo here.
-            if(page == 1280) then
-                page = 1024;
-            endif;
+if(freePage == 64) then
+    alias pageTableEntry S6;
+    pageTableEntry = PTBR + VPagenum*2;
+    while (1) do
+        pageTableEntry = pageTableEntry + 2;
+        if (pageTableEntry == 1280) then
+            pageTableEntry = 1024;
             continue;
         endif;
 
-        if([page + 1] == "01" || [page + 1] == "11") then
-            if([MEM_LIST + [page + 0]] > 1) then
-                page = page + 2;
-                if(page == 1280) then
-                    page = 1024;
-                endif;
-                continue;
-            endif;
-
-            if([page + 1] == "11") then
-                [page + 1] = "01";
-            else
-                index = 448;
-                while(index < 512) do
-                    if([DISK_LIST + index] == 0) then
-                        break;
-                    endif;
-                    index = index + 1;
-                endwhile;
-
-                if(index == 512) then
-                    SP = SP + 1;
-                    [physicalSP] = 10;
-                    inline "JMP 11776";
-                    ireturn;
-                endif;
-
-                store([page], index);
-
-                physicalPage = [page];
-
-                [DISK_LIST + counter] = [DISK_LIST + counter] + 1;
-                store(6, 20);
-                [page] = index;
-                [page + 1] = "00";
-            endif;
+        if ((pageTableEntry - 1024) % 8 == 6) then
+            continue;
         endif;
-        page = page + 2;
-        if(page == 1280) then
-            page = 1024;
+
+        if ([pageTableEntry + 1] == "11") then
+            [pageTableEntry + 1] = "01";
+            continue;
         endif;
+
+        if ([pageTableEntry + 1] == "00") then
+            continue;
+        endif;
+
+        if ([MEM_LIST + [pageTableEntry]] != 1) then
+            continue;
+        endif;
+
+        break;
     endwhile;
+
+    alias freeBlock S7;
+    freeBlock = 448;
+    while (freeBlock < 512) do
+        if ([DISK_LIST + freeBlock] == 0) then
+            [DISK_LIST + freeBlock] = 1;
+            break;
+        endif;
+        freeBlock = freeBlock + 1;
+    endwhile;
+    if (freeBlock == 512) then
+        print("Swap Full");
+        halt;
+    endif;
+    store([pageTableEntry], freeBlock);
+    freePage = [pageTableEntry];
+    [pageTableEntry] = freeBlock;
+    [pageTableEntry + 1] = "00";
 endif;
 
 alias PVPagenum S9;
@@ -137,8 +127,6 @@ if(PVPagenum >= 448) then
     store(6, 20);
 endif;
 
-print "here";
-
 [PTBR + VPagenum * 2 + 0] = freePage;
 [PTBR + VPagenum * 2 + 1] = "11";
 
@@ -146,6 +134,4 @@ SP = SP + 1;
 physicalSP = (([PTBR + (SP / 512)] * 512) + (SP % 512));
 
 [physicalSP] = Ip_addr;
-print Ip_addr;
-print "here1";
 ireturn;

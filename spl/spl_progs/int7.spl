@@ -4,19 +4,19 @@ physicalSP = ([PTBR + 2 * (SP / 512)] * 512) + (SP % 512);
 alias sysCallNo S1;
 sysCallNo = [physicalSP - 1];
 
-alias newPhysicalSP S9;
-
 if(sysCallNo == 10 || sysCallNo == 14) then
-    alias currentPID S5;
-    currentPID = (PTBR - 1024) / 8;
+    alias newPID S10;
+    newPID = (PTBR - 1024) / 8;
 
     alias newPCB S11;
     alias counter S4;
     counter = 0;
 
     while(counter < 32) do
-        if([READY_LIST + counter * 32 + 1] == (100 + currentPID)) then
-            [READY_LIST + counter * 32 + 1] = 1;
+        newPID = (newPID + 1) % 32;
+        newPCB = READY_LIST + newPID * 32;
+        if([newPCB + 1] == (100 + ((PTBR - 1024) / 8))) then
+            [newPCB + 1] = 1;
         endif;
         counter = counter + 1;
     endwhile;
@@ -41,16 +41,19 @@ if(sysCallNo == 10 || sysCallNo == 14) then
         halt;
     endif;
 
+    alias currentPID S5;
+    currentPID = (PTBR - 1024) / 8;
+
     alias currentPCB S6;
     currentPCB = READY_LIST + currentPID * 32;
 
     counter = 15;
     while(counter < 31) do
         if([currentPCB + counter] != -1) then
-            [FILE_TABLE + [currentPCB + counter] * 2 + 1] = [FILE_TABLE + [currentPCB + counter]*2 + 1] - 1;
+            [FILE_TABLE + [currentPCB + counter] + 1] = [FILE_TABLE + [currentPCB + counter] + 1] - 1;
 
-            if([FILE_TABLE + [currentPCB + counter]*2 + 1] == 0) then
-                [FILE_TABLE + [currentPCB + counter]*2 + 0] = -1;
+            if([FILE_TABLE + [currentPCB + counter] + 1] == 0) then
+                [FILE_TABLE + [currentPCB + counter] + 0] = -1;
             endif;
 
             [currentPCB + counter + 0] = -1;
@@ -66,20 +69,12 @@ if(sysCallNo == 10 || sysCallNo == 14) then
 
     counter = 0;
 
-    alias pageNumber S8;
-    while(counter < PTLR) do
-        pageNumber = pagetable + counter * 2;
-        if([pageNumber + 1] == "01" || [pageNumber + 1] == "11") then
-            [MEM_LIST + [pageNumber + 0]] = [MEM_LIST + [pageNumber + 0]] - 1;
+    while(counter < 4) do
+        if([pagetable + 2 * counter + 1] == "01" || [pagetable + 2 * counter + 1] == "11") then
+            [MEM_LIST + [pagetable + 2 * counter]] = 0;
         endif;
-
-        if([pageNumber + 1] == "00" && [pageNumber + 0] >= 448) then
-            [DISK_LIST + [pageNumber + 0]] = [DISK_LIST + [pageNumber + 0]] - 1;
-            store(6, 20);
-        endif;
-
-        [pageNumber + 0] = -1;
-        [pageNumber + 1] = "00";
+        [pagetable + 2 * counter + 0] = -1;
+        [pagetable + 2 * counter + 1] = "00";
         counter = counter + 1;
     endwhile;
 
@@ -104,7 +99,7 @@ if(sysCallNo == 10 || sysCallNo == 14) then
     R7 = [newPCB + 14];
     SP = SP + 1;
 
-
+    alias newPhysicalSP S9;
     newPhysicalSP = ([PTBR + 2 * (SP / 512) + 0] * 512) + (SP % 512);
     [newPhysicalSP] = [newPCB + 4];
     [newPCB + 1] = 2;
@@ -169,6 +164,7 @@ if(sysCallNo == 13) then
     R7 = [newPCB + 14];
 
     SP = SP + 1;
+    alias newPhysicalSP S8;
     newPhysicalSP = ([PTBR + (SP / 512) * 2] * 512) + (SP % 512);
 
     [newPhysicalSP] = [newPCB + 4];

@@ -108,7 +108,6 @@ if(sysCallNo == 12) then
     currentPID = (PTBR - 1024) / 8;
     alias currentPCB S3;
     currentPCB = READY_LIST + currentPID * 32;
-
     if([currentPCB + 31] < 0 || [currentPCB + 31] > 31) then
         [physicalSP - 2] = -1;
         ireturn;

@@ -1,10 +1,8 @@
 integer main() {
-    integer i;
-    while(i <= 20) do
-        if(i % 2 == 0) then
-            print(i);
-        endif;
-        i = i + 1;
-    endwhile;
+    print(2);
+    print(4);
+    print(6);
+    print(8);
+    print(10);
     return 0;
 }
