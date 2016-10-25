@@ -1,12 +1,13 @@
 integer main()
 {
-    integer childpid, i, retval;
-    i = 0;
+    integer childpid, retval;
     childpid = Fork();
     if(childpid == -2) then
-        retval = Exec("odd.xsm");
+        retval = Exec("sample.xsm");
     else
-        retval = Exec("even.xsm");
+        while(childpid != -1) do
+            print(childpid);
+            endwhile;
     endif;
     return 0;
 }

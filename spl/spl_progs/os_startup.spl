@@ -2,21 +2,10 @@ load(7, 1);
 load(8, 2);
 load(23,17);
 load(24,18);
-[READY_LIST + 0] = 0;
-load(25, 21);
-load(26, 22);
-load(27, 23);
+
 PTBR = 1024;
 PTLR = 4;
-[PTBR + 0] = 25;
-[PTBR + 1] = "01";
-[PTBR + 2] = 26;
-[PTBR + 3] = "01";
-[PTBR + 4] = 27;
-[PTBR + 5] = "01";
-[PTBR + 6] = 28;
-[PTBR + 7] = "01";
-[READY_LIST + 1] = 2;
+
 SP = 3 * 512;
 [28 * 512] = 0;
 
@@ -54,11 +43,39 @@ load(10,4);
 
 //fat and disk free list
 load(5, 19);
-load(6,20);
+load(6, 20);
 
-breakpoint;
 alias counter S0;
 
+[PTBR + 0] = "21";      //
+[PTBR + 1] = "00";      //
+[PTBR + 2] = "22";      // Assigning disk blocks for process, not loaded in
+[PTBR + 3] = "00";      // memory, setting auxiliary info to not referenced and
+[PTBR + 4] = "23";      // invalid.
+[PTBR + 5] = "00";      //
+
+[PTBR + 6] = "25";      // Setting physical page 25
+[PTBR + 7] = "01";      // for stack
+
+[READY_LIST + 0] = 0;
+[READY_LIST + 1] = 2;
+[READY_LIST + 2] = 0;
+[READY_LIST + 3] = 3*512;
+[READY_LIST + 4] = 0;
+[READY_LIST + 5] = PTBR;
+[READY_LIST + 6] = PTLR;
+[READY_LIST + 31] = 0;
+[MEM_LIST + 25] = 1;    // used block 25 for stack of init
+
+// initializing per process open file of init process.
+counter = 15;
+while(counter <= 30) do
+    [READY_LIST + counter] = -1;
+    [READY_LIST + counter + 1] = -1;
+    counter = counter + 2;
+endwhile;
+
+// setting system wide open file entries invalid
 // FILE_TABLE = 1344
 counter = 0;
 while(counter < 128) do
@@ -67,10 +84,11 @@ while(counter < 128) do
     counter = counter + 2;          // Move to next entry
 endwhile;
 
-//MEM_LIST = 1280
+// setting MEM_LIST entries to unused, up to 24 contains int. routines and etc
+// MEM_LIST = 1280
 counter = 0;
 while(counter < 64) do
-    if(counter < 29) then
+    if(counter <= 25) then
         [MEM_LIST + counter] = 1;
     else
         [MEM_LIST + counter] = 0;
@@ -78,16 +96,20 @@ while(counter < 64) do
     counter = counter + 1;
 endwhile;
 
-counter = 15;
-while(counter <= 30) do
-    [READY_LIST + counter] = -1;
-    [READY_LIST + counter + 1] = 0;
-    counter = counter + 2;
-endwhile;
-
+// initializing PCB of processes with state 0
 counter = 1;
-while(counter < 32 && READY_LIST + counter * 32 < 2560) do
+while(counter < 32) do
     [READY_LIST + counter * 32 + 1] = 0;
     counter = counter + 1;
 endwhile;
+
+// clearing memory copy of disk free list.
+counter = 448;
+while(counter < 512) do
+    [DISK_LIST + counter] = 0;
+    counter = counter + 1;
+endwhile;
+
+store(6, 20);       // committing memory copy of dfl back to disk
+
 ireturn;

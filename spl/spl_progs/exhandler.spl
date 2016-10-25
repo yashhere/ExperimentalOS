@@ -1,0 +1,138 @@
+alias Cause S0;
+Cause = EFR % 10;               // Gets value of cause field (size 1 char)
+
+alias VPagenum S1;
+VPagenum = (EFR / 10) % 100;    // Gets value of BadVAddr
+
+alias Ip_addr S2;
+Ip_addr = (EFR / 1000);         // Gets value of IP at the point of exception
+
+alias physicalSP S11;
+physicalSP = (([PTBR + (SP / 512) * 2] * 512) + (SP % 512));
+
+if(Cause != 0) then
+    if(Cause == 1) then
+        print("Illegal Instruction");
+    endif;
+
+    if(Cause == 2) then
+        print("Illegal Memory Access");
+    endif;
+
+    if(Cause == 3) then
+        print("Arithmetic Exception");
+    endif;
+
+    if(Cause == 4) then
+        print("Illegal Operands");
+    endif;
+
+    SP = SP + 2;
+    physicalSP = [PTBR + 2 * SP/512]*512 + SP%512;
+    [physicalSP - 1] = 10;
+    inline "JMP 3584";
+endif;
+
+if([PTBR + VPagenum * 2 + 0] == -1) then
+    SP = SP + 2;
+    physicalSP = [PTBR + 2 * SP/512]*512 + SP%512;
+    [physicalSP - 1] = 10;
+    inline "JMP 3584";
+endif;
+
+alias counter S3;
+counter = 0;
+
+alias freePage S4;
+freePage = 0;
+
+alias index S5;
+
+alias currentPID S6;
+currentPID = (PTBR - 1024) / 8;
+
+alias page S7;
+page = PTBR + VPagenum * 2;
+
+alias physicalPage S8;
+
+while(freePage < 64) do
+    if([MEM_LIST + freePage] == 0) then
+        [MEM_LIST + freePage] = 1;
+        break;
+    endif;
+    freePage = freePage + 1;
+endwhile;
+
+// there can be at most 32 page tables of 4 entries. each entry of two words. So at most 256 words
+if(freePage == 64) then
+    alias pTableEntry S6;
+    pTableEntry = PTBR + VPagenum*2;
+    while (1 == 1) do
+        pTableEntry = pTableEntry + 2;
+        //make it look circular
+        if (pTableEntry == 1280) then
+            pTableEntry = PAGE_TABLE;
+            continue;
+        endif;
+        //ignore stack
+        if ((pTableEntry - (PAGE_TABLE + 6)) % 8 == 0) then
+            continue;
+        endif;
+
+        if ([pTableEntry + 1] == "11") then
+            [pTableEntry + 1] = "01";
+            continue;
+        endif;
+
+        if ([pTableEntry + 1] == "00") then
+            continue;
+        endif;
+        //You can't swap out this page if it is referened by some other process
+        if ([MEM_LIST + [pTableEntry]] != 1) then      //What will happen if all pages are referenced by atleast one process?
+            continue;
+        endif;
+        // [pTableEntry + 1] == "01" // Swap out victim page idetified!
+        break;
+    endwhile;
+        // Scan for a free block in swap
+        alias freeSwapBlock S7;
+        freeSwapBlock = 448;
+        while (freeSwapBlock < 512) do
+            if ([DISK_LIST + freeSwapBlock] == 0) then
+                [DISK_LIST + freeSwapBlock] = 1;
+                break;
+            endif;
+            freeSwapBlock = freeSwapBlock + 1;
+        endwhile;
+        if (freeSwapBlock == 512) then
+            print("Swap Full");
+            halt;
+        endif;
+        store([pTableEntry], freeSwapBlock);
+        freePage = [pTableEntry];
+        [pTableEntry] = freeSwapBlock;
+        [pTableEntry + 1] = "00";
+endif;
+
+alias PVPagenum S9;
+PVPagenum = [PTBR + VPagenum * 2];
+
+if(PVPagenum > 20 && PVPagenum < 448) then
+    load(freePage, PVPagenum);
+endif;
+
+if(PVPagenum >= 448) then
+    load(freePage, PVPagenum);
+    [DISK_LIST + PVPagenum] = [DISK_LIST + PVPagenum] - 1;
+    store(6, 20);
+endif;
+
+[PTBR + VPagenum * 2 + 0] = freePage;
+[PTBR + VPagenum * 2 + 1] = "11";
+
+SP = SP + 1;
+physicalSP = (([PTBR + (SP / 512)] * 512) + (SP % 512));
+
+[physicalSP] = Ip_addr;
+ireturn;

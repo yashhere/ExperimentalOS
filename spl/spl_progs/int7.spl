@@ -5,9 +5,6 @@ alias sysCallNo S1;
 sysCallNo = [physicalSP - 1];
 
 if(sysCallNo == 10 || sysCallNo == 14) then
-    alias fileName S2;
-    fileName = [physicalSP - 3];
-
     alias newPID S10;
     newPID = (PTBR - 1024) / 8;
 
