@@ -27,17 +27,15 @@ if(Cause != 0) then
         print("Illegal Operands");
     endif;
 
-    SP = SP + 2;
-    physicalSP = [PTBR + 2 * SP/512]*512 + SP%512;
-    [physicalSP - 1] = 10;
-    inline "JMP 3584";
+    SP = SP + 1;
+    [physicalSP] = 10;
+    inline "JMP 11776";
 endif;
 
 if([PTBR + VPagenum * 2 + 0] == -1) then
-    SP = SP + 2;
-    physicalSP = [PTBR + 2 * SP/512]*512 + SP%512;
-    [physicalSP - 1] = 10;
-    inline "JMP 3584";
+    SP = SP + 1;
+    [physicalSP] = 10;
+    inline "JMP 11776";
 endif;
 
 alias counter S3;
@@ -106,7 +104,9 @@ if(freePage == 64) then
     endwhile;
     if (freeBlock == 512) then
         print("Swap Full");
-        halt;
+        SP = SP + 1;
+        [physicalSP] = 10;
+        inline "JMP 11776";
     endif;
     store([pageTableEntry], freeBlock);
     freePage = [pageTableEntry];

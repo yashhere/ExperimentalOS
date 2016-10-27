@@ -13,10 +13,8 @@ if(sysCallNo == 10 || sysCallNo == 14) then
     counter = 0;
 
     while(counter < 32) do
-        newPID = (newPID + 1) % 32;
-        newPCB = READY_LIST + newPID * 32;
-        if([newPCB + 1] == (100 + ((PTBR - 1024) / 8))) then
-            [newPCB + 1] = 1;
+        if([READY_LIST + counter*32 + 1] == (100 + ((PTBR - 1024) / 8))) then
+            [READY_LIST + counter*32 + 1] = 1;
         endif;
         counter = counter + 1;
     endwhile;
@@ -71,10 +69,15 @@ if(sysCallNo == 10 || sysCallNo == 14) then
 
     while(counter < 4) do
         if([pagetable + 2 * counter + 1] == "01" || [pagetable + 2 * counter + 1] == "11") then
-            [MEM_LIST + [pagetable + 2 * counter]] = 0;
+            if([pagetable + 2*counter] < 448) then
+                [MEM_LIST + [pagetable + 2 * counter]] = [MEM_LIST + [pagetable + 2 * counter]] - 1;
+            else
+                [DISK_LIST + [pagetable + 2*counter]] = [DISK_LIST + [pagetable + 2*counter]] - 1;
+                store(6, 20);
+            endif;
+            [pagetable + 2 * counter + 0] = -1;
+            [pagetable + 2 * counter + 1] = "00";
         endif;
-        [pagetable + 2 * counter + 0] = -1;
-        [pagetable + 2 * counter + 1] = "00";
         counter = counter + 1;
     endwhile;
 
