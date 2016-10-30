@@ -9,7 +9,7 @@ integer main() {
         status = Fork();
         if(status == -2) then
             status = Exec(input);
-
+            breakpoint;
             if(status == -1) then
                 print("Exec failed");
             endif;

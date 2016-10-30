@@ -12,7 +12,7 @@ physicalSP = (([PTBR + (SP / 512) * 2] * 512) + (SP % 512));
 
 if(Cause != 0) then
     if(Cause == 1) then
-        print("Illegal Instruction");
+        print("Illegal inst");
     endif;
 
     if(Cause == 2) then
@@ -93,6 +93,7 @@ if(freePage == 64) then
         break;
     endwhile;
 
+    print "here1";
     alias freeBlock S7;
     freeBlock = 448;
     while (freeBlock < 512) do
@@ -131,7 +132,8 @@ endif;
 [PTBR + VPagenum * 2 + 1] = "11";
 
 SP = SP + 1;
-physicalSP = (([PTBR + (SP / 512)] * 512) + (SP % 512));
+physicalSP = (([PTBR + 2 * (SP / 512)] * 512) + (SP % 512));
 
 [physicalSP] = Ip_addr;
+
 ireturn;
