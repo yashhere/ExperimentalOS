@@ -32,7 +32,7 @@ if(sysCallNo == 8) then
     if(counter == 64) then
         alias pageTableEntry S7;
         pageTableEntry = 1022;
-        while (1 == 1) do
+        while (1) do
             pageTableEntry = pageTableEntry + 2;
 
             if (pageTableEntry == 1280) then
@@ -53,7 +53,7 @@ if(sysCallNo == 8) then
                 continue;
             endif;
 
-            if ([MEM_LIST + [pageTableEntry]] != 1) then
+            if ([MEM_LIST + [pageTableEntry]] > 1) then
                 continue;
             endif;
 
